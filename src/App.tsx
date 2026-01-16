@@ -1,3 +1,4 @@
+console.log('BACKEND URL:', import.meta.env.VITE_API_URL);
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
