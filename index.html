@@ -29,103 +29,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@700;800&display=swap" rel="stylesheet">
     <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: {
-                            50: '#f0f7ff',
-                            100: '#e0f0ff',
-                            200: '#c0e1ff',
-                            300: '#90ccff',
-                            400: '#5fb0ff',
-                            500: '#1e90ff',
-                            600: '#0077ff',
-                            700: '#0066dd',
-                            800: '#0055bb',
-                            900: '#004499',
-                        },
-                        secondary: {
-                            500: '#667eea',
-                            600: '#5a6fd8',
-                            700: '#4d5ec4',
-                        },
-                        accent: {
-                            500: '#10b981',
-                            600: '#0da271',
-                            700: '#0a8a61',
-                        },
-                        premium: {
-                            500: '#8b5cf6',
-                            600: '#7c4dff',
-                            700: '#6d3aff',
-                        }
-                    },
-                    fontFamily: {
-                        inter: ['Inter', 'sans-serif'],
-                        poppins: ['Poppins', 'sans-serif'],
-                    },
-                    animation: {
-                        'float': 'float 6s ease-in-out infinite',
-                        'pulse-glow': 'pulse-glow 4s ease-in-out infinite',
-                        'gradient': 'gradient 8s ease infinite',
-                        'twinkle': 'twinkle 3s ease-in-out infinite',
-                        'slide-up': 'slideUp 0.6s ease-out',
-                        'fade-in': 'fadeIn 0.8s ease-out',
-                        'rocket-launch': 'rocketLaunch 0.5s ease-out',
-                        'count-up': 'countUp 2s ease-out',
-                        'pulse-slow': 'pulse 3s ease-in-out infinite',
-                        'slide-in-right': 'slideInRight 0.5s ease-out',
-                        'notification-pop': 'notificationPop 0.5s ease-out',
-                    },
-                    keyframes: {
-                        float: {
-                            '0%, 100%': { transform: 'translateY(0)' },
-                            '50%': { transform: 'translateY(-20px)' },
-                        },
-                        'pulse-glow': {
-                            '0%, 100%': { opacity: 0.3, filter: 'blur(20px)' },
-                            '50%': { opacity: 0.5, filter: 'blur(15px)' },
-                        },
-                        gradient: {
-                            '0%, 100%': { backgroundPosition: '0% 50%' },
-                            '50%': { backgroundPosition: '100% 50%' },
-                        },
-                        twinkle: {
-                            '0%, 100%': { opacity: 0.2 },
-                            '50%': { opacity: 0.8 },
-                        },
-                        fadeIn: {
-                            '0%': { opacity: 0 },
-                            '100%': { opacity: 1 }
-                        },
-                        slideUp: {
-                            '0%': { transform: 'translateY(30px)', opacity: 0 },
-                            '100%': { transform: 'translateY(0)', opacity: 1 }
-                        },
-                        rocketLaunch: {
-                            '0%': { transform: 'translateY(0) scale(1)' },
-                            '50%': { transform: 'translateY(-10px) scale(1.05)' },
-                            '100%': { transform: 'translateY(0) scale(1)' },
-                        },
-                        countUp: {
-                            '0%': { opacity: 0, transform: 'translateY(20px)' },
-                            '100%': { opacity: 1, transform: 'translateY(0)' }
-                        },
-                        slideInRight: {
-                            '0%': { transform: 'translateX(100%)', opacity: 0 },
-                            '100%': { transform: 'translateX(0)', opacity: 1 }
-                        },
-                        notificationPop: {
-                            '0%': { transform: 'scale(0)', opacity: 0 },
-                            '70%': { transform: 'scale(1.1)', opacity: 1 },
-                            '100%': { transform: 'scale(1)', opacity: 1 }
-                        }
-                    }
-                },
-            },
-        }
+        // Custom configuration removed since Tailwind CSS is not loaded
     </script>
     <style>
         :root {
@@ -1682,6 +1586,49 @@
             filter: brightness(0) invert(1);
             opacity: 1;
             transform: translateY(-2px);
+        }
+        
+        /* Animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.3; filter: blur(20px); }
+            50% { opacity: 0.5; filter: blur(15px); }
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.2; }
+            50% { opacity: 0.8; }
+        }
+        
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            0% { transform: translateY(30px); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+        
+        @keyframes rocketLaunch {
+            0% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-10px) scale(1.05); }
+            100% { transform: translateY(0) scale(1); }
+        }
+        
+        @keyframes slideInRight {
+            0% { transform: translateX(100%); opacity: 0; }
+            100% { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes notificationPop {
+            0% { transform: scale(0); opacity: 0; }
+            70% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
         }
         
         /* Responsive */
