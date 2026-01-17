@@ -16,29 +16,29 @@ const FixHistorySkeleton: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-          {[...Array(4)].map((_, i) => (
+          {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="h-10 bg-gray-200 rounded-lg"></div>
           ))}
         </div>
       </div>
       
-      <div className="p-6">
-        <table className="w-full">
+      <div className="p-6 overflow-x-auto">
+        <table className="w-full min-w-max">
           <thead>
             <tr>
-              {[...Array(7)].map((_, i) => (
-                <th key={i} className="py-4 px-6">
-                  <div className="h-4 bg-gray-200 rounded"></div>
+              {Array.from({ length: 7 }).map((_, i) => (
+                <th key={i} className="py-4 px-6 text-left">
+                  <div className="h-4 bg-gray-200 rounded w-full"></div>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            {[...Array(5)].map((_, rowIndex) => (
+            {Array.from({ length: 5 }).map((_, rowIndex) => (
               <tr key={rowIndex} className="border-t border-gray-200">
-                {[...Array(7)].map((_, cellIndex) => (
+                {Array.from({ length: 7 }).map((_, cellIndex) => (
                   <td key={cellIndex} className="py-4 px-6">
-                    <div className="h-4 bg-gray-100 rounded"></div>
+                    <div className="h-4 bg-gray-100 rounded w-full"></div>
                   </td>
                 ))}
               </tr>
