@@ -1,6 +1,8 @@
 import React from 'react';
 
 const ReportSkeleton: React.FC = () => {
+  const skeletonCards = Array.from({ length: 3 });
+
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-gray-200 overflow-hidden animate-pulse">
       <div className="bg-gradient-to-r from-gray-200 to-gray-300 p-6">
@@ -23,8 +25,8 @@ const ReportSkeleton: React.FC = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {[...Array(3)].map((_, i) => (
-            <div key={i} className="h-32 bg-gray-100 rounded-xl"></div>
+          {skeletonCards.map((_, i) => (
+            <div key={`skeleton-card-${i}`} className="h-32 bg-gray-100 rounded-xl"></div>
           ))}
         </div>
         
