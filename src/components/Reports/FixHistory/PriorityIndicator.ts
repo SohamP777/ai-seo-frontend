@@ -1,6 +1,6 @@
 import React from 'react';
 import { AlertTriangle, AlertCircle, Info, Flag } from 'lucide-react';
-import { FixPriority } from '@/types/fixer';
+import { FixPriority } from '@/types/fixer'; // Keep your original import
 
 interface PriorityIndicatorProps {
   priority: FixPriority;
@@ -37,6 +37,10 @@ const PriorityIndicator: React.FC<PriorityIndicatorProps> = ({ priority }) => {
           border: 'border-blue-200',
           label: 'Low',
         };
+      default:
+        // TypeScript should prevent this case, but we handle it anyway
+        const exhaustiveCheck: never = priority;
+        throw new Error(`Unhandled priority case: ${exhaustiveCheck}`);
     }
   };
 
