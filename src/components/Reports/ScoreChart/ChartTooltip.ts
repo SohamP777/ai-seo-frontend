@@ -26,7 +26,7 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, per
   const date = new Date(label || data.timestamp);
 
   const getMetricIcon = (dataKey: string) => {
-    const icons = {
+    const icons: Record<string, React.ComponentType<any>> = {
       overallScore: Target,
       performanceScore: Zap,
       accessibilityScore: Shield,
@@ -39,11 +39,11 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, per
       responseTime: Clock,
     };
     
-    return icons[dataKey as keyof typeof icons] || Target;
+    return icons[dataKey] || Target;
   };
 
   const getMetricColor = (dataKey: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       overallScore: '#3b82f6',
       performanceScore: '#10b981',
       accessibilityScore: '#8b5cf6',
@@ -56,7 +56,37 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, per
       responseTime: '#6366f1',
     };
     
-    return colors[dataKey as keyof typeof colors] || '#6b7280';
+    return colors[dataKey] || '#6b7280';
+  };
+
+  // Helper function to format metric names
+  const formatMetricName = (dataKey: string) => {
+    return dataKey
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase())
+      .trim();
+  };
+
+  // Helper function to format values
+  const formatValue = (value: number, dataKey: string) => {
+    if (typeof value !== 'number') return String(value);
+
+    let formattedValue: string | number;
+    
+    if (dataKey.includes('Rate') || dataKey.includes('Score')) {
+      formattedValue = value.toFixed(1);
+    } else {
+      formattedValue = Math.round(value);
+    }
+
+    let suffix = '';
+    if (dataKey.includes('Score') || dataKey.includes('Rate')) {
+      suffix = '%';
+    } else if (dataKey === 'responseTime') {
+      suffix = 'ms';
+    }
+
+    return `${formattedValue}${suffix}`;
   };
 
   return (
@@ -87,18 +117,11 @@ const ChartTooltip: React.FC<ChartTooltipProps> = ({ active, payload, label, per
                 />
                 <Icon className="w-4 h-4 text-gray-500" />
                 <span className="text-sm font-medium text-gray-700">
-                  {entry.dataKey.replace(/([A-Z])/g, ' $1').trim()}
+                  {formatMetricName(entry.dataKey)}
                 </span>
               </div>
               <div className="text-sm font-bold text-gray-900">
-                {typeof entry.value === 'number' 
-                  ? entry.dataKey.includes('Rate') || entry.dataKey.includes('Score')
-                    ? entry.value.toFixed(1)
-                    : Math.round(entry.value)
-                  : entry.value}
-                {entry.dataKey.includes('Score') && '%'}
-                {entry.dataKey.includes('Rate') && '%'}
-                {entry.dataKey === 'responseTime' && 'ms'}
+                {formatValue(entry.value, entry.dataKey)}
               </div>
             </div>
           );
