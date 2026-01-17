@@ -146,6 +146,7 @@ const ScoreChart: React.FC<ScoreChartProps> = memo(({
   const getDateRange = useCallback((period: string) => {
     const end = new Date();
     let start = new Date();
+    let endDate = new Date();
     
     switch (period) {
       case '7d':
@@ -167,7 +168,7 @@ const ScoreChart: React.FC<ScoreChartProps> = memo(({
         }
     }
     
-    return { start: startOfDay(start), end: endOfDay(end) };
+    return { start: startOfDay(start), end: endOfDay(endDate) };
   }, [customRange]);
 
   // Fetch chart data
@@ -218,7 +219,7 @@ const ScoreChart: React.FC<ScoreChartProps> = memo(({
     loadChartData();
     
     // Auto-refresh if interval is set
-    let intervalId: NodeJS.Timeout;
+    let intervalId: NodeJS.Timeout | null = null;
     if (refreshInterval > 0) {
       intervalId = setInterval(loadChartData, refreshInterval);
     }
@@ -226,7 +227,7 @@ const ScoreChart: React.FC<ScoreChartProps> = memo(({
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [period, projectId, refreshInterval, showBenchmarks, config.showForecast]);
+  }, [period, projectId, refreshInterval, showBenchmarks, config.showForecast, getDateRange, fetchScoreHistory, getTrendAnalysis]);
 
   // Handle fullscreen
   useEffect(() => {
@@ -292,7 +293,8 @@ const ScoreChart: React.FC<ScoreChartProps> = memo(({
       toast.success(`Chart exported as ${format.toUpperCase()}`);
     } catch (error) {
       console.error('Export failed:', error);
-      toast.error(`Export failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Export failed: ${errorMessage}`);
     } finally {
       setIsExporting(false);
     }
@@ -321,7 +323,7 @@ const ScoreChart: React.FC<ScoreChartProps> = memo(({
   }, [onDataPointClick]);
 
   const getChartColor = useCallback((metric: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       overallScore: '#3b82f6',
       performanceScore: '#10b981',
       accessibilityScore: '#8b5cf6',
@@ -334,11 +336,11 @@ const ScoreChart: React.FC<ScoreChartProps> = memo(({
       responseTime: '#6366f1',
     };
     
-    return colors[metric as keyof typeof colors] || '#6b7280';
+    return colors[metric] || '#6b7280';
   }, []);
 
   const getMetricIcon = useCallback((metric: string) => {
-    const icons = {
+    const icons: Record<string, React.ComponentType<any>> = {
       overallScore: Target,
       performanceScore: Zap,
       accessibilityScore: Shield,
@@ -351,7 +353,7 @@ const ScoreChart: React.FC<ScoreChartProps> = memo(({
       responseTime: Clock,
     };
     
-    return icons[metric as keyof typeof icons] || BarChart3;
+    return icons[metric] || BarChart3;
   }, []);
 
   const renderChart = useMemo(() => {
@@ -537,7 +539,7 @@ const ScoreChart: React.FC<ScoreChartProps> = memo(({
               travellerWidth={10}
               startIndex={brushRange[0]}
               endIndex={brushRange[1]}
-              onChange={({ startIndex, endIndex }) => {
+              onChange={({ startIndex, endIndex }: { startIndex: number; endIndex: number }) => {
                 setBrushRange([startIndex, endIndex]);
               }}
             />
