@@ -1,9 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /api/
-Disallow: /admin/
-
-Sitemap: https://seosps.com/sitemap.xml
-
-# Crawl delay (be nice to servers)
-Crawl-delay: 2
