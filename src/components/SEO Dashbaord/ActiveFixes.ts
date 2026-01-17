@@ -40,6 +40,23 @@ interface FixStats {
   averageTime: number;
 }
 
+// Define missing enum values if they don't exist in the imported types
+enum FixStatusEnum {
+  RUNNING = 'running',
+  PENDING = 'pending',
+  PAUSED = 'paused',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+  CANCELLED = 'cancelled'
+}
+
+enum FixPriorityEnum {
+  CRITICAL = 'critical',
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low'
+}
+
 const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({ 
   maxItems = 5, 
   autoRefresh = true,
@@ -66,18 +83,20 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
 
   // Custom hook with real API integration
   const { 
-    activeFixes, 
+    activeFixes = [], 
     loading, 
     error, 
-    metrics,
+    metrics = {
+      completedToday: 0,
+      successRate: 0,
+      averageTime: 0
+    },
     pauseFix, 
     resumeFix, 
     cancelFix,
     retryFix,
     refreshActiveFixes,
-    getFixDetails,
-    applyBulkFix,
-    getFixLogs
+    getFixDetails
   } = useAutoFix(workspaceId);
 
   // Memoized calculations
@@ -87,43 +106,61 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
     return [...activeFixes]
       .sort((a, b) => {
         // Priority order
-        const priorityOrder: Record<FixPriority, number> = {
-          [FixPriority.CRITICAL]: 0,
-          [FixPriority.HIGH]: 1,
-          [FixPriority.MEDIUM]: 2,
-          [FixPriority.LOW]: 3
+        const priorityOrder: Record<string, number> = {
+          [FixPriorityEnum.CRITICAL]: 0,
+          [FixPriorityEnum.HIGH]: 1,
+          [FixPriorityEnum.MEDIUM]: 2,
+          [FixPriorityEnum.LOW]: 3,
+          critical: 0,
+          high: 1,
+          medium: 2,
+          low: 3
         };
         
         // Status order (running first, then paused, etc.)
-        const statusOrder: Record<FixStatus, number> = {
-          [FixStatus.RUNNING]: 0,
-          [FixStatus.PENDING]: 1,
-          [FixStatus.PAUSED]: 2,
-          [FixStatus.COMPLETED]: 3,
-          [FixStatus.FAILED]: 4,
-          [FixStatus.CANCELLED]: 5
+        const statusOrder: Record<string, number> = {
+          [FixStatusEnum.RUNNING]: 0,
+          [FixStatusEnum.PENDING]: 1,
+          [FixStatusEnum.PAUSED]: 2,
+          [FixStatusEnum.COMPLETED]: 3,
+          [FixStatusEnum.FAILED]: 4,
+          [FixStatusEnum.CANCELLED]: 5,
+          running: 0,
+          pending: 1,
+          paused: 2,
+          completed: 3,
+          failed: 4,
+          cancelled: 5
         };
         
         // Sort by priority first, then status, then start time
-        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-          return priorityOrder[a.priority] - priorityOrder[b.priority];
+        const aPriority = priorityOrder[a.priority] ?? 2;
+        const bPriority = priorityOrder[b.priority] ?? 2;
+        
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
         }
         
-        if (statusOrder[a.status] !== statusOrder[b.status]) {
-          return statusOrder[a.status] - statusOrder[b.status];
+        const aStatus = statusOrder[a.status] ?? 2;
+        const bStatus = statusOrder[b.status] ?? 2;
+        
+        if (aStatus !== bStatus) {
+          return aStatus - bStatus;
         }
         
-        return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
+        const aTime = new Date(a.startedAt || new Date()).getTime();
+        const bTime = new Date(b.startedAt || new Date()).getTime();
+        return bTime - aTime;
       })
       .slice(0, maxItems);
   }, [activeFixes, maxItems]);
 
   // Calculate stats
   useEffect(() => {
-    if (activeFixes.length > 0) {
-      const totalProcessed = activeFixes.reduce((sum, fix) => sum + fix.processedItems, 0);
-      const successful = activeFixes.filter(f => f.status === FixStatus.COMPLETED).length;
-      const failed = activeFixes.filter(f => f.status === FixStatus.FAILED).length;
+    if (activeFixes && activeFixes.length > 0) {
+      const totalProcessed = activeFixes.reduce((sum, fix) => sum + (fix.processedItems || 0), 0);
+      const successful = activeFixes.filter(f => f.status === FixStatusEnum.COMPLETED || f.status === 'completed').length;
+      const failed = activeFixes.filter(f => f.status === FixStatusEnum.FAILED || f.status === 'failed').length;
       const totalTime = activeFixes.reduce((sum, fix) => {
         if (fix.completedAt && fix.startedAt) {
           const duration = new Date(fix.completedAt).getTime() - new Date(fix.startedAt).getTime();
@@ -190,7 +227,8 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
         autoClose: 3000,
       });
     } catch (err) {
-      toast.error(`Failed to pause fix: ${err instanceof Error ? err.message : 'Unknown error'}`, {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to pause fix: ${errorMessage}`, {
         position: "bottom-right",
         autoClose: 5000,
       });
@@ -205,7 +243,8 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
         autoClose: 3000,
       });
     } catch (err) {
-      toast.error(`Failed to resume fix: ${err instanceof Error ? err.message : 'Unknown error'}`, {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to resume fix: ${errorMessage}`, {
         position: "bottom-right",
         autoClose: 5000,
       });
@@ -224,7 +263,8 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
         autoClose: 3000,
       });
     } catch (err) {
-      toast.error(`Failed to cancel fix: ${err instanceof Error ? err.message : 'Unknown error'}`, {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to cancel fix: ${errorMessage}`, {
         position: "bottom-right",
         autoClose: 5000,
       });
@@ -239,7 +279,8 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
         autoClose: 3000,
       });
     } catch (err) {
-      toast.error(`Failed to retry fix: ${err instanceof Error ? err.message : 'Unknown error'}`, {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      toast.error(`Failed to retry fix: ${errorMessage}`, {
         position: "bottom-right",
         autoClose: 5000,
       });
@@ -282,72 +323,82 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
   }, [expandedFix, onFixSelect, getFixDetails]);
 
   // Utility functions
-  const getStatusConfig = (status: FixStatus) => {
-    const configs = {
-      [FixStatus.RUNNING]: {
+  const getStatusConfig = (status: string) => {
+    const configs: Record<string, {
+      color: string;
+      icon: React.ComponentType<{ className?: string }>;
+      iconColor: string;
+      bgColor: string;
+    }> = {
+      [FixStatusEnum.RUNNING]: {
         color: 'bg-blue-100 text-blue-800 border-blue-200',
         icon: ArrowPathIcon,
         iconColor: 'text-blue-600',
         bgColor: 'bg-blue-50'
       },
-      [FixStatus.PAUSED]: {
+      [FixStatusEnum.PAUSED]: {
         color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
         icon: PauseIcon,
         iconColor: 'text-yellow-600',
         bgColor: 'bg-yellow-50'
       },
-      [FixStatus.COMPLETED]: {
+      [FixStatusEnum.COMPLETED]: {
         color: 'bg-green-100 text-green-800 border-green-200',
         icon: CheckCircleIcon,
         iconColor: 'text-green-600',
         bgColor: 'bg-green-50'
       },
-      [FixStatus.FAILED]: {
+      [FixStatusEnum.FAILED]: {
         color: 'bg-red-100 text-red-800 border-red-200',
         icon: ExclamationCircleIcon,
         iconColor: 'text-red-600',
         bgColor: 'bg-red-50'
       },
-      [FixStatus.PENDING]: {
+      [FixStatusEnum.PENDING]: {
         color: 'bg-gray-100 text-gray-800 border-gray-200',
         icon: ClockIcon,
         iconColor: 'text-gray-600',
         bgColor: 'bg-gray-50'
       },
-      [FixStatus.CANCELLED]: {
+      [FixStatusEnum.CANCELLED]: {
         color: 'bg-gray-100 text-gray-800 border-gray-200',
         icon: XMarkIcon,
         iconColor: 'text-gray-600',
         bgColor: 'bg-gray-50'
       }
     };
-    return configs[status] || configs[FixStatus.PENDING];
+    
+    return configs[status] || configs[FixStatusEnum.PENDING];
   };
 
-  const getPriorityConfig = (priority: FixPriority) => {
-    const configs = {
-      [FixPriority.CRITICAL]: {
+  const getPriorityConfig = (priority: string) => {
+    const configs: Record<string, {
+      color: string;
+      text: string;
+      textColor: string;
+    }> = {
+      [FixPriorityEnum.CRITICAL]: {
         color: 'bg-red-500',
         text: 'Critical',
         textColor: 'text-red-700'
       },
-      [FixPriority.HIGH]: {
+      [FixPriorityEnum.HIGH]: {
         color: 'bg-orange-500',
         text: 'High',
         textColor: 'text-orange-700'
       },
-      [FixPriority.MEDIUM]: {
+      [FixPriorityEnum.MEDIUM]: {
         color: 'bg-yellow-500',
         text: 'Medium',
         textColor: 'text-yellow-700'
       },
-      [FixPriority.LOW]: {
+      [FixPriorityEnum.LOW]: {
         color: 'bg-blue-500',
         text: 'Low',
         textColor: 'text-blue-700'
       }
     };
-    return configs[priority] || configs[FixPriority.MEDIUM];
+    return configs[priority] || configs[FixPriorityEnum.MEDIUM];
   };
 
   const formatDuration = (startedAt: string, completedAt?: string) => {
@@ -370,7 +421,7 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
     }
   };
 
-  const calculateProgressPercentage = (processed: number, total: number) => {
+  const calculateProgressPercentage = (processed: number = 0, total: number = 0) => {
     if (total === 0) return 0;
     const percentage = (processed / total) * 100;
     return Math.min(Math.round(percentage * 10) / 10, 100); // One decimal place
@@ -392,9 +443,16 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
     try {
       const promises = sortedFixes
         .filter(fix => {
-          if (action === 'pauseAll') return fix.status === FixStatus.RUNNING;
-          if (action === 'resumeAll') return fix.status === FixStatus.PAUSED;
-          if (action === 'cancelAll') return [FixStatus.RUNNING, FixStatus.PAUSED, FixStatus.PENDING].includes(fix.status);
+          if (action === 'pauseAll') return fix.status === FixStatusEnum.RUNNING || fix.status === 'running';
+          if (action === 'resumeAll') return fix.status === FixStatusEnum.PAUSED || fix.status === 'paused';
+          if (action === 'cancelAll') return [
+            FixStatusEnum.RUNNING, 
+            FixStatusEnum.PAUSED, 
+            FixStatusEnum.PENDING,
+            'running',
+            'paused',
+            'pending'
+          ].includes(fix.status);
           return false;
         })
         .map(fix => {
@@ -416,6 +474,16 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
       });
     }
   }, [sortedFixes, pauseFix, resumeFix, cancelFix]);
+
+  // Helper function to format bytes
+  const formatBytes = (bytes: number, decimals = 2): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  };
 
   // Render loading state
   if (loading && sortedFixes.length === 0) {
@@ -534,9 +602,9 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                 <div className="hidden sm:flex items-center space-x-2">
                   <button
                     onClick={() => handleBulkAction('pauseAll')}
-                    disabled={!sortedFixes.some(f => f.status === FixStatus.RUNNING)}
+                    disabled={!sortedFixes.some(f => f.status === FixStatusEnum.RUNNING || f.status === 'running')}
                     className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      sortedFixes.some(f => f.status === FixStatus.RUNNING)
+                      sortedFixes.some(f => f.status === FixStatusEnum.RUNNING || f.status === 'running')
                         ? 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'
                         : 'bg-gray-50 text-gray-400 cursor-not-allowed'
                     }`}
@@ -545,9 +613,9 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                   </button>
                   <button
                     onClick={() => handleBulkAction('resumeAll')}
-                    disabled={!sortedFixes.some(f => f.status === FixStatus.PAUSED)}
+                    disabled={!sortedFixes.some(f => f.status === FixStatusEnum.PAUSED || f.status === 'paused')}
                     className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
-                      sortedFixes.some(f => f.status === FixStatus.PAUSED)
+                      sortedFixes.some(f => f.status === FixStatusEnum.PAUSED || f.status === 'paused')
                         ? 'bg-green-50 text-green-700 hover:bg-green-100'
                         : 'bg-gray-50 text-gray-400 cursor-not-allowed'
                     }`}
@@ -568,7 +636,7 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                     <p className="text-sm font-medium text-blue-700">Active</p>
                     <p className="text-2xl font-bold text-blue-900 mt-1">
                       {sortedFixes.filter(f => 
-                        [FixStatus.RUNNING, FixStatus.PENDING].includes(f.status)
+                        [FixStatusEnum.RUNNING, FixStatusEnum.PENDING, 'running', 'pending'].includes(f.status)
                       ).length}
                     </p>
                   </div>
@@ -622,11 +690,18 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
               const statusConfig = getStatusConfig(fix.status);
               const priorityConfig = getPriorityConfig(fix.priority);
               const progressPercentage = calculateProgressPercentage(fix.processedItems, fix.totalItems);
-              const impactScore = calculateImpact(fix.severity, fix.affectedPages, {
-                timeSinceDetection: fix.timeSinceDetection,
-                competitorImpact: fix.competitorImpact,
-                userExperienceImpact: fix.userExperienceImpact
-              });
+              
+              // Safely calculate impact score with fallback values
+              const impactScore = calculateImpact(
+                fix.severity || 'medium', 
+                fix.affectedPages || 0, 
+                {
+                  timeSinceDetection: fix.timeSinceDetection || 0,
+                  competitorImpact: fix.competitorImpact || 0,
+                  userExperienceImpact: fix.userExperienceImpact || 0
+                }
+              );
+              
               const isExpanded = expandedFix === fix.id;
               const StatusIcon = statusConfig.icon;
 
@@ -703,8 +778,8 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                                   />
                                 </div>
                                 <div className="flex justify-between text-xs text-gray-500 mt-2">
-                                  <span>{fix.processedItems.toLocaleString()} of {fix.totalItems.toLocaleString()} items</span>
-                                  <span>{formatDuration(fix.startedAt, fix.completedAt)} elapsed</span>
+                                  <span>{(fix.processedItems || 0).toLocaleString()} of {(fix.totalItems || 0).toLocaleString()} items</span>
+                                  <span>{formatDuration(fix.startedAt || new Date().toISOString(), fix.completedAt)} elapsed</span>
                                 </div>
                               </div>
                               
@@ -712,11 +787,11 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                               <div className="flex flex-wrap items-center gap-4 text-sm">
                                 <div className="flex items-center text-gray-600">
                                   <ArrowTopRightOnSquareIcon className="w-4 h-4 mr-1.5" />
-                                  <span>{fix.affectedPages.toLocaleString()} pages</span>
+                                  <span>{(fix.affectedPages || 0).toLocaleString()} pages</span>
                                 </div>
                                 <div className="flex items-center text-gray-600">
                                   <DocumentTextIcon className="w-4 h-4 mr-1.5" />
-                                  <span>{fix.filesModified?.toLocaleString() || 0} files</span>
+                                  <span>{(fix.filesModified || 0).toLocaleString()} files</span>
                                 </div>
                                 <div className={`flex items-center px-3 py-1 rounded-full ${getImpactColor(impactScore)}`}>
                                   <InformationCircleIcon className="w-4 h-4 mr-1.5" />
@@ -732,7 +807,7 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                             className="flex items-center space-x-2 ml-4"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {fix.status === FixStatus.RUNNING && (
+                            {(fix.status === FixStatusEnum.RUNNING || fix.status === 'running') && (
                               <button
                                 onClick={() => handlePauseFix(fix.id, fix.title)}
                                 className="p-2 text-gray-500 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
@@ -743,7 +818,7 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                               </button>
                             )}
                             
-                            {fix.status === FixStatus.PAUSED && (
+                            {(fix.status === FixStatusEnum.PAUSED || fix.status === 'paused') && (
                               <>
                                 <button
                                   onClick={() => handleResumeFix(fix.id, fix.title)}
@@ -756,7 +831,7 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                               </>
                             )}
                             
-                            {fix.status === FixStatus.FAILED && (
+                            {(fix.status === FixStatusEnum.FAILED || fix.status === 'failed') && (
                               <button
                                 onClick={() => handleRetryFix(fix.id, fix.title)}
                                 className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -767,7 +842,14 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                               </button>
                             )}
                             
-                            {[FixStatus.RUNNING, FixStatus.PAUSED, FixStatus.PENDING].includes(fix.status) && (
+                            {[
+                              FixStatusEnum.RUNNING, 
+                              FixStatusEnum.PAUSED, 
+                              FixStatusEnum.PENDING,
+                              'running',
+                              'paused',
+                              'pending'
+                            ].includes(fix.status) && (
                               <button
                                 onClick={() => handleCancelFix(fix.id, fix.title)}
                                 className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -805,12 +887,12 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                                 <dl className="space-y-3">
                                   <div className="flex justify-between">
                                     <dt className="text-sm text-gray-500">Type</dt>
-                                    <dd className="text-sm font-medium text-gray-900">{fix.type}</dd>
+                                    <dd className="text-sm font-medium text-gray-900">{fix.type || 'Not specified'}</dd>
                                   </div>
                                   <div className="flex justify-between">
                                     <dt className="text-sm text-gray-500">Started</dt>
                                     <dd className="text-sm text-gray-900">
-                                      {new Date(fix.startedAt).toLocaleString()}
+                                      {new Date(fix.startedAt || new Date()).toLocaleString()}
                                     </dd>
                                   </div>
                                   {fix.completedAt && (
@@ -829,7 +911,7 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                                       fix.severity === 'medium' ? 'text-yellow-600' :
                                       'text-blue-600'
                                     }`}>
-                                      {fix.severity}
+                                      {fix.severity || 'medium'}
                                     </dd>
                                   </div>
                                   {fix.estimatedTime && (
@@ -856,7 +938,7 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                                   </div>
                                   <div className="flex justify-between">
                                     <dt className="text-sm text-gray-500">Files Modified</dt>
-                                    <dd className="text-sm text-gray-900">{fix.filesModified?.toLocaleString() || 0}</dd>
+                                    <dd className="text-sm text-gray-900">{(fix.filesModified || 0).toLocaleString()}</dd>
                                   </div>
                                   {fix.sizeChange && (
                                     <div className="flex justify-between">
@@ -872,7 +954,7 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                                     <div className="flex justify-between">
                                       <dt className="text-sm text-gray-500">Errors Encountered</dt>
                                       <dd className="text-sm font-medium text-red-600">
-                                        {fix.errorCount.toLocaleString()}
+                                        {(fix.errorCount || 0).toLocaleString()}
                                       </dd>
                                     </div>
                                   )}
@@ -886,7 +968,7 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                                 <h4 className="text-sm font-semibold text-gray-900 mb-3">Recent Activity</h4>
                                 <div className="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto">
                                   <ul className="space-y-2 text-sm">
-                                    {fix.notes.map((note, index) => (
+                                    {fix.notes.map((note: string, index: number) => (
                                       <li key={index} className="text-gray-600 flex">
                                         <span className="text-gray-400 mr-2">•</span>
                                         <span>{note}</span>
@@ -943,11 +1025,25 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
                 <button
                   onClick={() => handleBulkAction('cancelAll')}
                   disabled={!sortedFixes.some(f => 
-                    [FixStatus.RUNNING, FixStatus.PAUSED, FixStatus.PENDING].includes(f.status)
+                    [
+                      FixStatusEnum.RUNNING, 
+                      FixStatusEnum.PAUSED, 
+                      FixStatusEnum.PENDING,
+                      'running',
+                      'paused',
+                      'pending'
+                    ].includes(f.status)
                   )}
                   className={`text-sm ${
                     sortedFixes.some(f => 
-                      [FixStatus.RUNNING, FixStatus.PAUSED, FixStatus.PENDING].includes(f.status)
+                      [
+                        FixStatusEnum.RUNNING, 
+                        FixStatusEnum.PAUSED, 
+                        FixStatusEnum.PENDING,
+                        'running',
+                        'paused',
+                        'pending'
+                      ].includes(f.status)
                     )
                       ? 'text-red-600 hover:text-red-800'
                       : 'text-gray-400 cursor-not-allowed'
@@ -971,16 +1067,6 @@ const ActiveFixes: React.FC<ActiveFixesProps> = React.memo(({
     </>
   );
 });
-
-// Helper function to format bytes
-const formatBytes = (bytes: number, decimals = 2): string => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const dm = decimals < 0 ? 0 : decimals;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-};
 
 // Display name for debugging
 ActiveFixes.displayName = 'ActiveFixes';
