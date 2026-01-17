@@ -7,7 +7,7 @@ interface BenchmarkData {
   yourPercentile: number;
   competitiveGap: number;
   improvementOpportunity: number;
-  benchmarks: Array<{
+  benchmarks?: Array<{
     metric: string;
     yourValue: number;
     industryAvg: number;
@@ -40,6 +40,11 @@ const BenchmarkIndicator: React.FC<BenchmarkIndicatorProps> = ({
     if (percentile >= 50) return 'Average';
     return 'Needs Improvement';
   };
+
+  // Calculate safe widths for progress bars
+  const yourScoreWidth = Math.min(100, Math.max(0, (currentScore / 100) * 100));
+  const industryAverageWidth = Math.min(100, Math.max(0, (benchmarks.industryAverage / 100) * 100));
+  const topPerformerWidth = Math.min(100, Math.max(0, (benchmarks.topPerformer / 100) * 100));
 
   return (
     <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl border border-gray-200 p-6">
@@ -116,11 +121,11 @@ const BenchmarkIndicator: React.FC<BenchmarkIndicatorProps> = ({
           </div>
           <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-200">
             <div
-              style={{ width: `${Math.min(100, (currentScore / 100) * 100)}%` }}
+              style={{ width: `${yourScoreWidth}%` }}
               className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
             />
             <div
-              style={{ width: `${Math.min(100, (benchmarks.industryAverage / 100) * 100)}%` }}
+              style={{ width: `${industryAverageWidth}%` }}
               className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-gray-400"
             />
           </div>
@@ -141,11 +146,11 @@ const BenchmarkIndicator: React.FC<BenchmarkIndicatorProps> = ({
           </div>
           <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-gray-200">
             <div
-              style={{ width: `${Math.min(100, (currentScore / 100) * 100)}%` }}
+              style={{ width: `${yourScoreWidth}%` }}
               className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500"
             />
             <div
-              style={{ width: `${Math.min(100, (benchmarks.topPerformer / 100) * 100)}%` }}
+              style={{ width: `${topPerformerWidth}%` }}
               className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-green-500"
             />
           </div>
