@@ -65,8 +65,16 @@ export interface WeeklyReportData {
   };
   topIssues: SEOIssue[];
   comparison: {
-    vsPreviousWeek: ReportComparison;
-    vsIndustryAverage: ReportComparison;
+    vsPreviousWeek: {
+      score: number;
+      delta: number;
+      percentile: number;
+    };
+    vsIndustryAverage: {
+      score: number;
+      delta: number;
+      percentile: number;
+    };
   };
   generatedAt: Date;
   expiresAt: Date;
@@ -158,7 +166,8 @@ const WeeklyReportCard: React.FC<WeeklyReportCardProps> = memo(({
       }
     } catch (error) {
       console.error('Export failed:', error);
-      toast.error(`Failed to export report: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to export report: ${errorMessage}`);
     } finally {
       setIsExporting(false);
     }
@@ -173,7 +182,8 @@ const WeeklyReportCard: React.FC<WeeklyReportCardProps> = memo(({
       toast.success('Report regeneration started');
     } catch (error) {
       console.error('Regeneration failed:', error);
-      toast.error('Failed to regenerate report');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to regenerate report: ${errorMessage}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -189,7 +199,8 @@ const WeeklyReportCard: React.FC<WeeklyReportCardProps> = memo(({
       setEmailInput('');
     } catch (error) {
       console.error('Share failed:', error);
-      toast.error('Failed to share report');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to share report: ${errorMessage}`);
     }
   }, [report.id, emailInput, onShare]);
 
@@ -210,18 +221,18 @@ const WeeklyReportCard: React.FC<WeeklyReportCardProps> = memo(({
   };
 
   const getSeverityBadge = (severity: SEOIssue['severity']) => {
-    const config = {
+    const config: Record<string, { bg: string; text: string; icon: React.ComponentType<{ className?: string }> }> = {
       critical: { bg: 'bg-red-100', text: 'text-red-800', icon: AlertTriangle },
       high: { bg: 'bg-orange-100', text: 'text-orange-800', icon: AlertTriangle },
       medium: { bg: 'bg-yellow-100', text: 'text-yellow-800', icon: Clock },
       low: { bg: 'bg-blue-100', text: 'text-blue-800', icon: CheckCircle },
     };
     
-    const { bg, text, icon: Icon } = config[severity];
+    const { bg, text, icon: Icon } = config[severity] || config.medium;
     return (
       <span className={`px-3 py-1 ${bg} ${text} text-xs font-semibold rounded-full inline-flex items-center gap-1`}>
         <Icon className="w-3 h-3" />
-        {severity}
+        {severity.charAt(0).toUpperCase() + severity.slice(1)}
       </span>
     );
   };
@@ -234,7 +245,7 @@ const WeeklyReportCard: React.FC<WeeklyReportCardProps> = memo(({
   };
 
   const getStatusBadge = () => {
-    const config = {
+    const config: Record<string, { bg: string; text: string; label: string }> = {
       generated: { bg: 'bg-green-100', text: 'text-green-800', label: 'Ready' },
       processing: { bg: 'bg-blue-100', text: 'text-blue-800', label: 'Processing' },
       failed: { bg: 'bg-red-100', text: 'text-red-800', label: 'Failed' },
@@ -280,6 +291,15 @@ const WeeklyReportCard: React.FC<WeeklyReportCardProps> = memo(({
         </div>
       </div>
     );
+  };
+
+  // Ensure formatPercentage function exists or create a fallback
+  const safeFormatPercentage = (value: number): string => {
+    if (typeof formatPercentage === 'function') {
+      return formatPercentage(value);
+    }
+    // Fallback implementation
+    return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
   };
 
   if (report.status === 'processing') {
@@ -351,7 +371,7 @@ const WeeklyReportCard: React.FC<WeeklyReportCardProps> = memo(({
                 <div className="flex-1">
                   <div className="flex justify-between text-sm text-gray-600 mb-2">
                     <span>Previous: {report.previousScore.toFixed(0)}</span>
-                    <span>Industry Avg: {report.comparison.vsIndustryAverage.score}</span>
+                    <span>Industry Avg: {report.comparison.vsIndustryAverage.score.toFixed(0)}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-4">
                     <div
@@ -376,14 +396,14 @@ const WeeklyReportCard: React.FC<WeeklyReportCardProps> = memo(({
                 <div className="text-sm text-gray-600 mb-1">Estimated Traffic Change</div>
                 <div className={`text-2xl font-bold ${report.metrics.businessImpact.estimatedTrafficChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {report.metrics.businessImpact.estimatedTrafficChange >= 0 ? '+' : ''}
-                  {formatPercentage(report.metrics.businessImpact.estimatedTrafficChange)}
+                  {safeFormatPercentage(report.metrics.businessImpact.estimatedTrafficChange)}
                 </div>
               </div>
               
               <div>
                 <div className="text-sm text-gray-600 mb-1">ROI Potential</div>
                 <div className={`text-2xl font-bold ${calculateROIColor(report.metrics.businessImpact.roi)}`}>
-                  {formatPercentage(report.metrics.businessImpact.roi)}
+                  {safeFormatPercentage(report.metrics.businessImpact.roi)}
                 </div>
               </div>
               
@@ -470,7 +490,7 @@ const WeeklyReportCard: React.FC<WeeklyReportCardProps> = memo(({
                     <div className="flex items-center gap-2 mb-1">
                       {getSeverityBadge(issue.severity)}
                       <span className="text-xs text-gray-500">
-                        Impact: {formatPercentage(calculateScoreImpact(issue))}
+                        Impact: {safeFormatPercentage(calculateScoreImpact(issue))}
                       </span>
                     </div>
                     <p className="font-medium text-gray-900 truncate group-hover:text-blue-600 transition-colors">
